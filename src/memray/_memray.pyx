@@ -630,6 +630,7 @@ cdef class Tracker:
     cdef object _previous_thread_profile_func
     cdef unique_ptr[RecordWriter] _writer
     cdef object _post_processing_callback
+    cdef object _destination
 
     cdef unique_ptr[Sink] _make_writer(self, destination) except*:
         # Creating a Sink can raise Python exceptions (if is interrupted by signal
@@ -666,9 +667,9 @@ cdef class Tracker:
         self._trace_python_allocators = trace_python_allocators
         self._post_processing_callback = post_processing_callback
         if file_name is not None:
-            destination = FileDestination(path=file_name)
+            self._destination = FileDestination(path=file_name)
 
-        if not isinstance(destination, FileDestination):
+        if not isinstance(self._destination, FileDestination):
             if follow_fork:
                 raise RuntimeError("follow_fork requires an output file")
 
@@ -677,7 +678,7 @@ cdef class Tracker:
 
         self._writer = move(
             createRecordWriter(
-                move(self._make_writer(destination)),
+                move(self._make_writer(self._destination)),
                 command_line,
                 native_traces,
                 file_format,
@@ -717,6 +718,13 @@ cdef class Tracker:
         NativeTracker.destroyTracker()
         sys.setprofile(self._previous_profile_func)
         threading.setprofile(self._previous_thread_profile_func)
+        if self._post_processing_callback is not None:
+            if isinstance(self._destination.path, str):
+                self._post_processing_callback(self._destination.path)
+            elif isinstance(self._destination.path, pathlib.Path):
+                self._post_processing_callback(str(self._destination.path))
+            else:
+                raise RuntimeError("the desitination path must be str or pathlib.Path")
 
 
 def start_thread_trace(frame, event, arg):
