@@ -3,6 +3,7 @@ from pathlib import Path
 from types import FrameType
 from types import TracebackType
 from typing import Any
+from typing import Callable
 from typing import Iterable
 from typing import Iterator
 from typing import List
@@ -223,6 +224,7 @@ class Tracker:
         follow_fork: bool = ...,
         trace_python_allocators: bool = ...,
         file_format: FileFormat = ...,
+        post_processing_callback: Callable[[str], None] | None = ...,
     ) -> None: ...
     def __enter__(self) -> Any: ...
     def __exit__(

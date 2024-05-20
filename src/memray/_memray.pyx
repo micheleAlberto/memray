@@ -617,6 +617,10 @@ cdef class Tracker:
         file_format (FileFormat): The format that should be used when writing
             to the capture file. See the `FileFormat` documentation for a list
             of supported file formats and their limitations.
+        post_processing_callback (Callable[[str], None]|None) an optional
+            function to be called when tracking is completed. The
+            `post_processing_callback` will receive the path of the capture
+            file as an argument.
     """
     cdef bool _native_traces
     cdef unsigned int _memory_interval_ms
@@ -625,6 +629,7 @@ cdef class Tracker:
     cdef object _previous_profile_func
     cdef object _previous_thread_profile_func
     cdef unique_ptr[RecordWriter] _writer
+    cdef object _post_processing_callback
 
     cdef unique_ptr[Sink] _make_writer(self, destination) except*:
         # Creating a Sink can raise Python exceptions (if is interrupted by signal
@@ -649,7 +654,8 @@ cdef class Tracker:
     def __cinit__(self, object file_name=None, *, object destination=None,
                   bool native_traces=False, unsigned int memory_interval_ms = 10,
                   bool follow_fork=False, bool trace_python_allocators=False,
-                  FileFormat file_format=FileFormat.ALL_ALLOCATIONS):
+                  FileFormat file_format=FileFormat.ALL_ALLOCATIONS,
+                  post_processing_callback=None):
         if (file_name, destination).count(None) != 1:
             raise TypeError("Exactly one of 'file_name' or 'destination' argument must be specified")
 
@@ -658,7 +664,7 @@ cdef class Tracker:
         self._memory_interval_ms = memory_interval_ms
         self._follow_fork = follow_fork
         self._trace_python_allocators = trace_python_allocators
-
+        self._post_processing_callback = post_processing_callback
         if file_name is not None:
             destination = FileDestination(path=file_name)
 
